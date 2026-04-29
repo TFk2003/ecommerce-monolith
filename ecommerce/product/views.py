@@ -2,9 +2,12 @@ from rest_framework import permissions, status
 from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+import logging
 
 from ecommerce.product.models import Product
 from ecommerce.product.serializers import ProductSerializer, ProductDetailSerializer, ProductImageSerializer
+
+logger = logging.getLogger(__name__)
 
 
 class ProductCreateView(GenericAPIView):
@@ -13,7 +16,8 @@ class ProductCreateView(GenericAPIView):
 
     def post(self, request):
         serializer = self.get_serializer(data=request.data)
-        serializer.is_valid()
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         validated_data = serializer.validated_data
         instance = serializer.create(validated_data)
@@ -21,15 +25,27 @@ class ProductCreateView(GenericAPIView):
         return Response(data=ProductDetailSerializer(instance).data, status=status.HTTP_201_CREATED)
 
     def patch(self, request, id=None):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid()
+        try:
+            instance = Product.objects.get(id=id)
+            
+            # Remove image from data if it's not a valid file
+            data = request.data.dict() if hasattr(request.data, 'dict') else dict(request.data)
+            if 'image' in data and not request.FILES.get('image'):
+                del data['image']
+            
+            serializer = self.get_serializer(instance, data=data, partial=True)
+            if not serializer.is_valid():
+                logger.error(f"Validation errors: {serializer.errors}")
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        validated_data = serializer.validated_data
-        print(validated_data)
-        instance = Product.objects.get(id=id)
-        instance = serializer.update(instance, validated_data)
+            validated_data = serializer.validated_data
+            print(validated_data)
+            instance = serializer.update(instance, validated_data)
 
-        return Response(data=ProductDetailSerializer(instance).data, status=status.HTTP_200_OK)
+            return Response(data=ProductDetailSerializer(instance).data, status=status.HTTP_200_OK)
+        except Exception as e:
+            logger.error(f"Error updating product: {str(e)}", exc_info=True)
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def delete(self, request, id=None):
         product_to_delete = Product.objects.get(id=id)
@@ -112,19 +128,24 @@ class ProductListTopView(GenericAPIView):
 
 class ProductImageView(GenericAPIView):
     serializer_class = ProductImageSerializer
-    permissions = [permissions.IsAdminUser]
+    permission_classes = [permissions.IsAdminUser]
 
     def post(self, request, id=None):
-        serializer_instance = self.get_serializer_class()
-        serializer = serializer_instance(data=request.data)
-        serializer.is_valid()
+        try:
+            serializer = self.get_serializer(data=request.data)
+            
+            if not serializer.is_valid():
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        validated_data = serializer.validated_data
-        print(validated_data)
-        instance = Product.objects.get(id=id)
-        instance.image = validated_data['image']
-        instance.save()
+            validated_data = serializer.validated_data
+            print(validated_data)
+            instance = Product.objects.get(id=id)
+            instance.image = validated_data['image']
+            instance.save()
 
-        return Response(serializer_instance(instance).data, status=status.HTTP_200_OK)
+            return Response(self.get_serializer(instance).data, status=status.HTTP_200_OK)
+        except Exception as e:
+            logger.error(f"Error uploading product image: {str(e)}", exc_info=True)
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 

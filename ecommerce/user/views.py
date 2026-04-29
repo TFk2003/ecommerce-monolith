@@ -50,13 +50,14 @@ class UserDetailView(GenericAPIView):
 
     def patch(self, request):
         user = request.user
-        serializer = self.get_serializer(data=request.data, many=False, partial=True)
-        serializer.is_valid()
+        serializer = self.get_serializer(user, data=request.data, partial=True)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         validated_data = serializer.validated_data
         instance = serializer.update(user, validated_data)
 
-        return Response(UserDetailTokenizedSerializer(instance).data, status=status.HTTP_201_CREATED)
+        return Response(UserDetailTokenizedSerializer(instance).data, status=status.HTTP_200_OK)
 
 
 class UserListView(GenericAPIView):
@@ -86,13 +87,14 @@ class UserAdminView(GenericAPIView):
     def patch(self, request, id=None):
         user = User.objects.get(id=id)
         serializer_class = self.get_serializer_class()
-        serializer = serializer_class(data=request.data, many=False, partial=True)
-        serializer.is_valid()
+        serializer = serializer_class(user, data=request.data, partial=True)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         validated_data = serializer.validated_data
         instance = serializer.update(user, validated_data)
 
-        return Response(serializer_class(instance).data, status=status.HTTP_201_CREATED)
+        return Response(serializer_class(instance).data, status=status.HTTP_200_OK)
 
     def delete(self, request, id=None):
         user_to_delete = User.objects.get(id=id)

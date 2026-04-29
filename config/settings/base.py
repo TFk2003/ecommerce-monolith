@@ -160,7 +160,6 @@ DATABASES = {
 # https://docs.djangoproject.com/en/dev/ref/settings/#authentication-backends
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
-    'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
 # Set AUTH_USER_MODEL
@@ -225,5 +224,5 @@ STATICFILES_DIRS = [
 ]
 
 # Media Fies (Images)
-MEDIA_ROOT = str(APPS_DIR / 'media'),
+MEDIA_ROOT = str(APPS_DIR / 'media')
 MEDIA_URL = '/media/'

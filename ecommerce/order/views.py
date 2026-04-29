@@ -32,12 +32,13 @@ class OrderDetailView(GenericAPIView):
         return Response(serializer_class(instance).data, status=status.HTTP_200_OK)
 
     def patch(self, request, id=None):
+        instance = Order.objects.get(id=id)
         serializer_class = self.get_serializer_class()
-        serializer = serializer_class(data=request.data)
-        serializer.is_valid()
+        serializer = serializer_class(instance, data=request.data, partial=True)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         validated_data = serializer.validated_data
-        instance = Order.objects.get(id=id)
         instance = serializer.update(instance, validated_data)
 
         return Response(serializer_class(instance).data, status=status.HTTP_200_OK)
@@ -67,12 +68,13 @@ class OrderAdminView(GenericAPIView):
         return Response(serializer_class(instances, many=True).data, status=status.HTTP_200_OK)
 
     def patch(self, request, id=None):
+        instance = Order.objects.get(id=id)
         serializer_class = self.get_serializer_class()
-        serializer = serializer_class(data=request.data)
-        serializer.is_valid()
+        serializer = serializer_class(instance, data=request.data, partial=True)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         validated_data = serializer.validated_data
-        instance = Order.objects.get(id=id)
         serializer.update(instance, validated_data)
 
         return Response(serializer_class(instance).data, status=status.HTTP_200_OK)

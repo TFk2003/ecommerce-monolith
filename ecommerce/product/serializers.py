@@ -13,6 +13,15 @@ class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         exclude = ('is_deleted',)
+        extra_kwargs = {
+            'image': {'required': False, 'allow_null': True},
+            'name': {'required': False},
+            'description': {'required': False},
+            'price': {'required': False},
+            'brand': {'required': False},
+            'category': {'required': False},
+            'count_in_stock': {'required': False},
+        }
 
 
 class ProductReviewSerializer(serializers.ModelSerializer):
