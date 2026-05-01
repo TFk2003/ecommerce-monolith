@@ -6,46 +6,34 @@ import logging
 
 from ecommerce.product.models import Product
 from ecommerce.product.serializers import ProductSerializer, ProductDetailSerializer, ProductImageSerializer
+from ecommerce.permissions import IsSellerOrAdmin
 
 logger = logging.getLogger(__name__)
 
 
 class ProductCreateView(GenericAPIView):
     serializer_class = ProductSerializer
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsSellerOrAdmin]
 
     def post(self, request):
         serializer = self.get_serializer(data=request.data)
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
 
         validated_data = serializer.validated_data
+        validated_data['seller'] = request.user
         instance = serializer.create(validated_data)
 
         return Response(data=ProductDetailSerializer(instance).data, status=status.HTTP_201_CREATED)
 
     def patch(self, request, id=None):
-        try:
-            instance = Product.objects.get(id=id)
-            
-            # Remove image from data if it's not a valid file
-            data = request.data.dict() if hasattr(request.data, 'dict') else dict(request.data)
-            if 'image' in data and not request.FILES.get('image'):
-                del data['image']
-            
-            serializer = self.get_serializer(instance, data=data, partial=True)
-            if not serializer.is_valid():
-                logger.error(f"Validation errors: {serializer.errors}")
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-            validated_data = serializer.validated_data
-            print(validated_data)
-            instance = serializer.update(instance, validated_data)
-
-            return Response(data=ProductDetailSerializer(instance).data, status=status.HTTP_200_OK)
-        except Exception as e:
-            logger.error(f"Error updating product: {str(e)}", exc_info=True)
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+ 
+        validated_data = serializer.validated_data
+        instance = Product.objects.get(id=id)
+        instance = serializer.update(instance, validated_data)
+ 
+        return Response(data=ProductDetailSerializer(instance).data, status=status.HTTP_200_OK)
 
     def delete(self, request, id=None):
         product_to_delete = Product.objects.get(id=id)
@@ -58,7 +46,7 @@ class ProductCreateView(GenericAPIView):
 
 class ProductDetailView(GenericAPIView):
     serializer_class = ProductDetailSerializer
-    permissions = [permissions.AllowAny]
+    permission_classes = [permissions.AllowAny]
 
     def get(self, request, id=None):
         serializer = self.get_serializer_class()
@@ -69,7 +57,7 @@ class ProductDetailView(GenericAPIView):
 class ProductListView(GenericAPIView):
     serializer_class = ProductDetailSerializer
     queryset = Product.objects.all()
-    permissions = [permissions.AllowAny]
+    permission_classes = [permissions.AllowAny]
 
     def get(self, request):
         search = request.query_params.get('search')
@@ -111,13 +99,11 @@ class ProductListView(GenericAPIView):
 class ProductListTopView(GenericAPIView):
     serializer_class = ProductDetailSerializer
     queryset = Product.objects.all()
-    permissions = [permissions.AllowAny]
+    permission_classes = [permissions.AllowAny]
 
     def get(self, request):
-        limit = int(request.query_params.get('limit'))
-
-        if limit is None:
-            limit = 5
+        limit = request.query_params.get('limit', 5)
+        limit = int(limit)
 
         serializer_class = self.get_serializer_class()
         queryset = self.get_queryset()
@@ -128,24 +114,19 @@ class ProductListTopView(GenericAPIView):
 
 class ProductImageView(GenericAPIView):
     serializer_class = ProductImageSerializer
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsSellerOrAdmin]
 
     def post(self, request, id=None):
-        try:
-            serializer = self.get_serializer(data=request.data)
-            
-            if not serializer.is_valid():
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer_instance = self.get_serializer_class()
+        serializer = serializer_instance(data=request.data)
+        serializer.is_valid(raise_exception=True)
 
-            validated_data = serializer.validated_data
-            print(validated_data)
-            instance = Product.objects.get(id=id)
-            instance.image = validated_data['image']
-            instance.save()
+        validated_data = serializer.validated_data
+        print(validated_data)
+        instance = Product.objects.get(id=id)
+        instance.image = validated_data['image']
+        instance.save()
 
-            return Response(self.get_serializer(instance).data, status=status.HTTP_200_OK)
-        except Exception as e:
-            logger.error(f"Error uploading product image: {str(e)}", exc_info=True)
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response(self.get_serializer(instance).data, status=status.HTTP_200_OK)
 
 
