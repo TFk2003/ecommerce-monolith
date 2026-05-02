@@ -38,21 +38,21 @@ function UserEditScreen(props) {
             dispatch({type: USER_UPDATE_RESET});
             navigate('/app/admin/users')
         }
-        else {
-            if(!user || !user.name || user.id !== Number(userId)) {
+        else if(!user || Number(user.id) !== Number(userId)) {
+            if(!loading) {
                 dispatch(getUserDetails(userId));
             }
-            else {
-                setUserDetailsState({
-                    name: user.name,
-                    email: user.email,
-                    mobile: user.profile ? user.profile.mobile : '',
-                    gender: user.profile ? user.profile.gender : '',
-                    isAdmin: user.isAdmin
-                })
-            }
         }
-    }, [dispatch, user, userId, navigate, updateSuccess]);
+        else {
+            setUserDetailsState({
+                name: user.name,
+                email: user.email,
+                mobile: user.profile ? user.profile.mobile : '',
+                gender: user.profile && user.profile.gender ? user.profile.gender : '',
+                isAdmin: user.isAdmin
+            })
+        }
+    }, [dispatch, user, loading, userId, navigate, updateSuccess]);
 
     const submitHandler = (e) => {
         e.preventDefault();
@@ -126,7 +126,7 @@ function UserEditScreen(props) {
                                         <Col md={6}>
                                             <Form.Label>Gender</Form.Label>
                                             <Form.Select
-                                                value={userDetailsState.gender.length ? userDetailsState.gender : ''}
+                                                value={userDetailsState.gender || ''}
                                                 onChange={(e) => setUserDetailsState({
                                                     ...userDetailsState,
                                                     gender: e.target.value

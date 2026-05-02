@@ -16,7 +16,7 @@ class PhoneMixin(models.Model):
     country_code = models.CharField(_('Country Code'), max_length=4, blank=True, null=True)
 
     # TODO: Add phone number validator
-    mobile = models.CharField(_('Mobile No'), max_length=10, blank=True, null=True)
+    mobile = models.CharField(_('Mobile No'), max_length=15, blank=True, null=True)
 
     class Meta:
         abstract = True

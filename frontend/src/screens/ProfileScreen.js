@@ -55,7 +55,7 @@ function ProfileScreen(props) {
                     name: user.name,
                     email: user.email,
                     mobile: user.profile.mobile ? user.profile.mobile : '',
-                    gender: user.profile.gender ? user.profile.gender : ''
+                    gender: user.profile && user.profile.gender ? user.profile.gender : ''
                 })
             }
         }
@@ -134,7 +134,7 @@ function ProfileScreen(props) {
                                 <Col md={6}>
                                     <Form.Label>Gender</Form.Label>
                                     <Form.Select
-                                        value={userDetails.gender.length ? userDetails.gender : ''}
+                                        value={userDetails.gender || ''}
                                         onChange={(e) => setUserDetails({
                                             ...userDetails,
                                             gender: e.target.value

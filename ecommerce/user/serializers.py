@@ -37,21 +37,22 @@ class UserDetailSerializer(UserSerializer):
         profile_instance = user.user_profile
         return UserProfileSerializer(profile_instance).data
 
+    def to_representation(self, instance):
+        UserProfile.objects.get_or_create(user=instance)
+        return super().to_representation(instance)
+
     def update(self, user, validated_data):
-        if 'user_profile' in validated_data:
-            profile_data = validated_data.pop('user_profile')
+        profile_data = validated_data.pop('user_profile', None)
 
-            profile = UserProfile.objects.get(id=user.user_profile.id)
-            serializer = UserProfileSerializer(data=profile_data, partial=True)
-            serializer.is_valid()
-            profile = serializer.update(profile, serializer.validated_data)
+        profile, _ = UserProfile.objects.get_or_create(user=user)
 
-            user.user_profile = profile
+        if profile_data is not None:
+            serializer = UserProfileSerializer(profile, data=profile_data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            profile = serializer.save()
+
+        user.user_profile = profile
         user = super().update(user, validated_data)
-
-        if validated_data['is_staff']:
-            user.is_staff = True
-            user.save()
 
         return user
 
